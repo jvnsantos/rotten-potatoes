@@ -1,0 +1,56 @@
+name: CI-CD
+
+on:
+  push:
+    branches: [ main ]
+  
+  workflow_dispatch:
+
+jobs:
+  CI:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      
+      - name: Docker Login
+        uses: docker/login-action@v1.12.0
+        with:
+          username: ${{ secrets.DOCKERHUB_USER }}
+          password: ${{ secrets.DOCKERHUB_PWD }}
+
+      - name: Docker Build and Push
+        uses: docker/build-push-action@v2.7.0
+        with:
+          context: ./src
+          file: ./src/Dockerfile
+          push: true
+          tags: |
+            rodrigoccs/rotten-potatoes:latest
+            rodrigoccs/rotten-potatoes:${{ github.run_number }}
+# passo de deploy dessa imagem no kuberntes
+  CD:
+# needs indica que o CD só entra em execução quando o CI terminar. Sem o needs eles executam em paralelo
+    needs: [CI]
+    runs-on: ubuntu-latest
+    steps: 
+      # baixar novamente o manifesto do repositório pq estamos em jobs diferentes 
+      - uses: actions/checkout@v2
+      
+      # mesmo sendo via digitalocean não tem problema setar a comunicação 
+      # via Azure(pq funciona com qualquer cluester kubernetes)
+      - name: Kubernetes Set Context
+        uses: Azure/k8s-set-context@v2
+        with:
+          method: kubeconfig
+          kubeconfig: ${{ secrets.K8S_KUBECONFIG }}
+
+# incluir a actiom de execução
+      - name: Deploy to Kubernetes cluster
+        uses: Azure/k8s-deploy@v1.3
+        with:
+          imagem: rodrigoccs/rotten-potatoes:${{ github.run_number }}
+# arquivo de manifesto
+          manifests: |
+            k8s/deployment.yaml
+        
