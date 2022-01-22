@@ -26,11 +26,9 @@ jobs:
           file: ./src/Dockerfile
           push: true
           tags: |
-            jvnsantos/rotten-potatoes:latest
-            jvnsantos/rotten-potatoes:${{ github.run_number }}
-# passo de deploy dessa imagem no kuberntes
+            fabricioveronez/rotten-potatoes:latest
+            fabricioveronez/rotten-potatoes:${{ github.run_number }}
   CD:
-# Sem o needs eles executam em paralelo
     needs: [CI]
     runs-on: ubuntu-latest
     steps: 
@@ -43,7 +41,7 @@ jobs:
       - name: Deploy to Kubernetes cluster
         uses: Azure/k8s-deploy@v1.3
         with:
-          imagem: jvnsantos/rotten-potatoes:${{ github.run_number }}
+          imagem: fabricioveronez/rotten-potatoes:${{ github.run_number }}
           manifests: |
             k8s/deployment.yaml
         
